@@ -12,8 +12,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
 using Aga.Controls.Tree;
 using Aga.Controls.Tree.NodeControls;
+
 using LibreHardwareMonitor.Hardware;
 using LibreHardwareMonitor.UI.Themes;
 using LibreHardwareMonitor.Utilities;
@@ -67,6 +69,11 @@ public sealed partial class MainForm : Form
     public MainForm()
     {
         InitializeComponent();
+
+        this.sensor.WidthChanged += delegate { TreeView_ColumnWidthChanged(this.sensor); };
+        this.value.WidthChanged += delegate { TreeView_ColumnWidthChanged(this.value); };
+        this.min.WidthChanged += delegate { TreeView_ColumnWidthChanged(this.min); };
+        this.max.WidthChanged += delegate { TreeView_ColumnWidthChanged(this.max); };
 
         _settings = new PersistentSettings();
         _settings.Load(Path.ChangeExtension(Application.ExecutablePath, ".config"));
@@ -434,7 +441,7 @@ public sealed partial class MainForm : Form
                     break;
             }
 
-            _computer.Accept(new SensorVisitor(delegate(ISensor sensor) { sensor.ValuesTimeWindow = timeWindow; }));
+            _computer.Accept(new SensorVisitor(delegate (ISensor sensor) { sensor.ValuesTimeWindow = timeWindow; }));
         };
 
         InitializeTheme();
@@ -668,7 +675,7 @@ public sealed partial class MainForm : Form
             }
         };
 
-        _plotForm.FormClosing += delegate(object sender, FormClosingEventArgs e)
+        _plotForm.FormClosing += delegate (object sender, FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
@@ -1005,6 +1012,38 @@ public sealed partial class MainForm : Form
             if (info.Node.Tag is SensorNode node && node.Sensor != null)
             {
                 treeContextMenu.Items.Clear();
+
+                /// 2025-02-21. Multi Select CheckBox
+                if (!node.Plot)
+                {
+                    ToolStripItem item = new ToolStripMenuItem("Check");
+                    item.Click += delegate
+                    {
+                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes)
+                        {
+                            if (nodes.Tag is SensorNode sensorNode)
+                            {
+                                sensorNode.Plot = true;
+                            }
+                        }
+                    };
+                    treeContextMenu.Items.Add(item);
+                }
+                else
+                {
+                    ToolStripItem item = new ToolStripMenuItem("Uncheck");
+                    item.Click += delegate
+                    {
+                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes)
+                        {
+                            if (nodes.Tag is SensorNode sensorNode)
+                            {
+                                sensorNode.Plot = false;
+                            }
+                        }
+                    }; treeContextMenu.Items.Add(item);
+                }
+
                 if (node.Sensor.Parameters.Count > 0)
                 {
                     ToolStripItem item = new ToolStripMenuItem("Parameters...");
@@ -1022,14 +1061,33 @@ public sealed partial class MainForm : Form
                 if (node.IsVisible)
                 {
                     ToolStripItem item = new ToolStripMenuItem("Hide");
-                    item.Click += delegate { node.IsVisible = false; };
+                    /// 2025-02-21. Multi Select Hide
+                    item.Click += delegate
+                    {
+                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes)
+                        {
+                            if (nodes.Tag is SensorNode node)
+                            {
+                                node.IsVisible = false;
+                            }
+                        }
+                    };
                     treeContextMenu.Items.Add(item);
                 }
                 else
                 {
                     ToolStripItem item = new ToolStripMenuItem("Unhide");
-                    item.Click += delegate { node.IsVisible = true; };
-                    treeContextMenu.Items.Add(item);
+                    /// 2025-02-21. Multi Select Unhide
+                    item.Click += delegate
+                    {
+                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes)
+                        {
+                            if (nodes.Tag is SensorNode node)
+                            {
+                                node.IsVisible = true;
+                            }
+                        }
+                    }; treeContextMenu.Items.Add(item);
                 }
 
                 treeContextMenu.Items.Add(new ToolStripSeparator());
@@ -1214,7 +1272,7 @@ public sealed partial class MainForm : Form
 
     private void ResetMinMaxMenuItem_Click(object sender, EventArgs e)
     {
-        _computer.Accept(new SensorVisitor(delegate(ISensor sensorClick)
+        _computer.Accept(new SensorVisitor(delegate (ISensor sensorClick)
         {
             sensorClick.ResetMin();
             sensorClick.ResetMax();
@@ -1292,7 +1350,8 @@ public sealed partial class MainForm : Form
         while (nextColumnIndex < treeView.Columns.Count && treeView.Columns[nextColumnIndex].IsVisible == false)
             nextColumnIndex++;
 
-        if (nextColumnIndex < treeView.Columns.Count) {
+        if (nextColumnIndex < treeView.Columns.Count)
+        {
             int diff = treeView.Width - columnsWidth;
             treeView.Columns[nextColumnIndex].Width = Math.Max(20, treeView.Columns[nextColumnIndex].Width + diff);
         }

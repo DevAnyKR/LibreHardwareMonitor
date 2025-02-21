@@ -1064,7 +1064,7 @@ public sealed partial class MainForm : Form
                     /// 2025-02-21. Multi Select Hide
                     item.Click += delegate
                     {
-                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes)
+                        foreach (TreeNodeAdv nodes in treeView.SelectedNodes.ToList())
                         {
                             if (nodes.Tag is SensorNode node)
                             {
